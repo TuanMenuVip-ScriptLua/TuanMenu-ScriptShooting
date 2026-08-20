@@ -6,7 +6,7 @@
 
 local Players, RunService, UIS = game:GetService("Players"), game:GetService("RunService"), game:GetService("UserInputService")
 local LP, Camera = Players.LocalPlayer, workspace.CurrentCamera
-local KEY = "TMV_Key100VV"
+local KEY = "TMVmenu"
 
 local ESPOn, FOVOn, SpinOn, AutoHeadOn, HeadViewOn = false, true, false, false, false
 local FOV_SIZE, SPIN_SPEED, HITBOX_SIZE = 300, 100, 15
