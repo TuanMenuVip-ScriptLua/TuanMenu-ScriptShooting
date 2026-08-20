@@ -1,0 +1,667 @@
+--==================================================
+--          Tuấn Menu Vip (UPDATED)
+--      ESP + FOV + SPIN + AUTO HEAD + MOBILE GUI
+--        WORK ON ALL SHOOTING GAME ON ROBLOX
+--==================================================
+
+local Players, RunService, UIS = game:GetService("Players"), game:GetService("RunService"), game:GetService("UserInputService")
+local LP, Camera = Players.LocalPlayer, workspace.CurrentCamera
+local KEY = "TMV3day"
+
+--============================================================
+-- KEY SYSTEM WITH 3-DAY EXPIRATION
+--============================================================
+
+local function getCurrentTimestamp()
+    return os.time()
+end
+
+local function getExpirationTimestamp(activationTime)
+    return activationTime + (3 * 24 * 60 * 60) -- 3 days in seconds
+end
+
+local function isKeyExpired(activationTime)
+    local currentTime = getCurrentTimestamp()
+    local expirationTime = getExpirationTimestamp(activationTime)
+    return currentTime > expirationTime
+end
+
+local function formatTimeRemaining(activationTime)
+    local currentTime = getCurrentTimestamp()
+    local expirationTime = getExpirationTimestamp(activationTime)
+    local remaining = expirationTime - currentTime
+    
+    if remaining <= 0 then
+        return "Expired"
+    end
+    
+    local days = math.floor(remaining / (24 * 60 * 60))
+    remaining = remaining - (days * 24 * 60 * 60)
+    local hours = math.floor(remaining / (60 * 60))
+    remaining = remaining - (hours * 60 * 60)
+    local minutes = math.floor(remaining / 60)
+    local seconds = math.floor(remaining % 60)
+    
+    if days > 0 then
+        return string.format("%dd %02dh %02dm", days, hours, minutes)
+    elseif hours > 0 then
+        return string.format("%02dh %02dm %02ds", hours, minutes, seconds)
+    elseif minutes > 0 then
+        return string.format("%02dm %02ds", minutes, seconds)
+    else
+        return string.format("%02ds", seconds)
+    end
+end
+
+--============================================================
+
+local ESPOn, FOVOn, SpinOn, AutoHeadOn, HeadViewOn = false, true, false, false, false
+local FOV_SIZE, SPIN_SPEED, HITBOX_SIZE = 300, 100, 15
+local SpinAngle, ESPObjects, Dragging = 0, {}, nil
+
+local MAX_HEAD_SIZE = 100
+local keyActivationTime = nil
+local keyValid = false
+local keyExpiredPermanently = false
+
+pcall(function() game.CoreGui.TuanMenuVip:Destroy() end)
+pcall(function() game.CoreGui.TuanMenuVipFOV:Destroy() end)
+
+local Gui = Instance.new("ScreenGui", game.CoreGui)
+Gui.Name, Gui.ResetOnSpawn, Gui.IgnoreGuiInset = "TuanMenuVip", false, true
+
+local function Corner(p, r) local c = Instance.new("UICorner", p) c.CornerRadius = UDim.new(0, r or 6) return c end
+
+--============================================================
+-- KEY SYSTEM UI
+--============================================================
+
+local KeyFrame = Instance.new("Frame", Gui)
+KeyFrame.Size, KeyFrame.Position, KeyFrame.AnchorPoint, KeyFrame.BackgroundColor3 = UDim2.fromOffset(220,150), UDim2.fromScale(0.5,0.5), Vector2.new(0.5,0.5), Color3.fromRGB(20,10,30)
+Corner(KeyFrame, 10)
+
+local KeyTitle = Instance.new("TextLabel", KeyFrame)
+KeyTitle.Size, KeyTitle.Text, KeyTitle.TextColor3, KeyTitle.BackgroundTransparency, KeyTitle.Font, KeyTitle.TextSize = UDim2.new(1,0,0,30), "Tuấn Menu Vip", Color3.fromRGB(0,255,150), 1, Enum.Font.Code, 16
+
+local KeyBox = Instance.new("TextBox", KeyFrame)
+KeyBox.Size, KeyBox.Position, KeyBox.PlaceholderText, KeyBox.Text, KeyBox.BackgroundColor3, KeyBox.TextColor3, KeyBox.Font, KeyBox.TextSize = UDim2.new(0.85,0,0,30), UDim2.new(0.075,0,0,38), "Enter Key", "", Color3.fromRGB(40,20,50), Color3.fromRGB(255,255,255), Enum.Font.Code, 13
+Corner(KeyBox)
+
+local KeyBtn = Instance.new("TextButton", KeyFrame)
+KeyBtn.Size, KeyBtn.Position, KeyBtn.Text, KeyBtn.BackgroundColor3, KeyBtn.TextColor3, KeyBtn.Font, KeyBtn.TextSize = UDim2.new(0.85,0,0,26), UDim2.new(0.075,0,0,74), "UNLOCK", Color3.fromRGB(0,150,0), Color3.fromRGB(255,255,255), Enum.Font.Code, 12
+Corner(KeyBtn)
+
+-- TIME REMAINING DISPLAY
+local TimeDisplay = Instance.new("TextLabel", KeyFrame)
+TimeDisplay.Size = UDim2.new(0.85,0,0,18)
+TimeDisplay.Position = UDim2.new(0.075,0,0,104)
+TimeDisplay.BackgroundTransparency = 1
+TimeDisplay.Text = "Time: --"
+TimeDisplay.TextColor3 = Color3.fromRGB(0,255,150)
+TimeDisplay.Font = Enum.Font.Code
+TimeDisplay.TextSize = 11
+TimeDisplay.Parent = KeyFrame
+
+--============================================================
+-- UPDATE TIME DISPLAY
+--============================================================
+
+local function updateTimeDisplay()
+    if keyExpiredPermanently then
+        TimeDisplay.Text = "EXPIRED - Key no longer valid"
+        TimeDisplay.TextColor3 = Color3.fromRGB(255,0,0)
+        return
+    end
+    
+    if keyActivationTime and keyValid then
+        if isKeyExpired(keyActivationTime) then
+            TimeDisplay.Text = "EXPIRED! Please restart"
+            TimeDisplay.TextColor3 = Color3.fromRGB(255,0,0)
+        else
+            local timeLeft = formatTimeRemaining(keyActivationTime)
+            TimeDisplay.Text = "Time left: " .. timeLeft
+            TimeDisplay.TextColor3 = Color3.fromRGB(0,255,150)
+        end
+    else
+        TimeDisplay.Text = "Time: --"
+    end
+end
+
+-- Update time every second
+task.spawn(function()
+    while true do
+        updateTimeDisplay()
+        task.wait(1)
+    end
+end)
+
+--============================================================
+-- MENU CHÍNH CÓ THANH CUỘN
+--============================================================
+
+local Menu = Instance.new("Frame", Gui)
+Menu.Size = UDim2.fromOffset(220, 380)
+Menu.Position = UDim2.fromScale(0.7, 0.25)
+Menu.BackgroundColor3 = Color3.fromRGB(10, 20, 10)
+Menu.Visible = false
+Menu.Active = true
+Menu.Draggable = true
+Menu.Parent = Gui
+Corner(Menu, 10)
+Instance.new("UIStroke", Menu).Color = Color3.fromRGB(0, 255, 150)
+
+local Title = Instance.new("TextLabel", Menu)
+Title.Size = UDim2.new(1, 0, 0, 32)
+Title.Text = "Tuấn Menu Vip"
+Title.BackgroundColor3 = Color3.fromRGB(0, 20, 0)
+Title.TextColor3 = Color3.fromRGB(0, 255, 150)
+Title.Font = Enum.Font.Code
+Title.TextSize = 14
+Title.Parent = Menu
+Corner(Title, 8)
+
+local ScrollFrame = Instance.new("ScrollingFrame", Menu)
+ScrollFrame.Size = UDim2.new(1, 0, 1, -38)
+ScrollFrame.Position = UDim2.new(0, 0, 0, 35)
+ScrollFrame.BackgroundTransparency = 1
+ScrollFrame.BorderSizePixel = 0
+ScrollFrame.ScrollBarThickness = 4
+ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 255, 150)
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollFrame.Parent = Menu
+
+local Container = Instance.new("Frame", ScrollFrame)
+Container.Size = UDim2.new(1, 0, 0, 0)
+Container.BackgroundTransparency = 1
+Container.Parent = ScrollFrame
+
+local List = Instance.new("UIListLayout", Container)
+List.SortOrder = Enum.SortOrder.LayoutOrder
+List.Padding = UDim.new(0, 4)
+List.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+local function MakeButton(txt, order)
+    local B = Instance.new("TextButton", Container)
+    B.Size = UDim2.new(0.9, 0, 0, 26)
+    B.Text = txt
+    B.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
+    B.TextColor3 = Color3.fromRGB(255, 255, 255)
+    B.Font = Enum.Font.Code
+    B.TextSize = 12
+    B.LayoutOrder = order
+    B.Parent = Container
+    Corner(B)
+    return B
+end
+
+local function MakeSliderUI(txtDef, minV, maxV, initV, order, callback)
+    local frame = Instance.new("Frame", Container)
+    frame.Size = UDim2.new(0.9, 0, 0, 24)
+    frame.BackgroundTransparency = 1
+    frame.LayoutOrder = order
+    frame.Parent = Container
+
+    local txt = Instance.new("TextLabel", frame)
+    txt.Size = UDim2.new(1, 0, 0, 12)
+    txt.Text = txtDef..initV
+    txt.BackgroundTransparency = 1
+    txt.TextColor3 = Color3.fromRGB(150, 255, 150)
+    txt.Font = Enum.Font.Code
+    txt.TextSize = 11
+    txt.Parent = frame
+
+    local back = Instance.new("Frame", frame)
+    back.Size = UDim2.new(1, 0, 0, 5)
+    back.Position = UDim2.new(0, 0, 0, 15)
+    back.BackgroundColor3 = Color3.fromRGB(40, 60, 40)
+    back.Parent = frame
+    Corner(back, 3)
+
+    local bar = Instance.new("Frame", back)
+    bar.Size = UDim2.new((initV-minV)/(maxV-minV), 0, 1, 0)
+    bar.BackgroundColor3 = Color3.fromRGB(0, 255, 150)
+    bar.Parent = back
+    Corner(bar, 3)
+
+    local function update(inputX)
+        local pct = math.clamp((inputX - back.AbsolutePosition.X) / back.AbsoluteSize.X, 0, 1)
+        local val = minV + (maxV - minV) * pct
+        if maxV <= 1 then
+            val = math.floor(val * 100) / 100
+        else
+            val = math.floor(val)
+        end
+        bar.Size = UDim2.new(pct, 0, 1, 0)
+        txt.Text = txtDef..val
+        callback(val)
+    end
+
+    back.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            Dragging = update
+            update(input.Position.X)
+        end
+    end)
+end
+
+local function updateCanvas()
+    wait(0.1)
+    local contentHeight = List.AbsoluteContentSize.Y
+    Container.Size = UDim2.new(1, 0, 0, contentHeight)
+    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, contentHeight + 10)
+end
+
+-- TẠO CÁC NÚT
+local ESPBtn = MakeButton("ESP : OFF", 1)
+local FOVBtn = MakeButton("FOV : ON", 2)
+MakeSliderUI("FOV Size: ", 100, 600, 300, 3, function(v) FOV_SIZE = v end)
+
+local SpinBtn = MakeButton("SPIN : OFF", 4)
+MakeSliderUI("Spin Speed: ", 1, 1000, 100, 5, function(v) SPIN_SPEED = v end)
+
+local AutoHeadBtn = MakeButton("AUTO HEAD : OFF", 6)
+MakeSliderUI("Auto Head Size: ", 1, 100, 15, 7, function(v) 
+    HITBOX_SIZE = v
+end)
+
+local HeadViewBtn = MakeButton("HEAD VIEW : OFF", 8)
+
+local Close = MakeButton("CLOSE MENU", 9)
+
+task.spawn(updateCanvas)
+
+--============================================================
+-- FOV CIRCLE
+--============================================================
+
+local FOVGui = Instance.new("ScreenGui", game.CoreGui)
+FOVGui.Name, FOVGui.ResetOnSpawn, FOVGui.IgnoreGuiInset = "TuanMenuVipFOV", false, true
+
+local Circle = Instance.new("Frame", FOVGui)
+Circle.AnchorPoint, Circle.Position, Circle.Size, Circle.BackgroundTransparency = Vector2.new(0.5,0.5), UDim2.fromScale(0.5,0.5), UDim2.fromOffset(300,300), 1
+Corner(Circle, 1000)
+Instance.new("UIStroke", Circle).Color = Color3.fromRGB(0,255,150)
+
+--============================================================
+-- FLOAT BUTTON - NỀN XANH LÁ + CHỮ TMV
+--============================================================
+
+local Float = Instance.new("TextButton", Gui)
+Float.Size = UDim2.fromOffset(70, 40)
+Float.Position = UDim2.new(0, 15, 0.5, 0)
+Float.AnchorPoint = Vector2.new(0, 0.5)
+Float.Text = "TMV"
+Float.TextColor3 = Color3.fromRGB(255, 255, 255)
+Float.TextSize = 16
+Float.Font = Enum.Font.Code
+Float.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+Float.BackgroundTransparency = 0
+Float.Active = true
+Float.Draggable = true
+Float.Visible = false
+Float.Parent = Gui
+Corner(Float, 8)
+Instance.new("UIStroke", Float).Color = Color3.fromRGB(0, 255, 150)
+
+--============================================================
+-- KEY VALIDATION
+--============================================================
+
+local function checkKeyValid()
+    if keyExpiredPermanently then
+        return false
+    end
+    
+    if not keyValid or (keyActivationTime and isKeyExpired(keyActivationTime)) then
+        if keyActivationTime and isKeyExpired(keyActivationTime) then
+            keyExpiredPermanently = true
+            keyValid = false
+            print("[KEY] Key has expired! Cannot use anymore.")
+            updateTimeDisplay()
+        end
+        return false
+    end
+    return true
+end
+
+--============================================================
+-- EVENTS
+--============================================================
+
+KeyBtn.MouseButton1Click:Connect(function()
+    if keyExpiredPermanently then
+        KeyBox.Text = ""
+        KeyBox.PlaceholderText = "Key Expired!"
+        task.wait(1)
+        KeyBox.PlaceholderText = "Enter Key"
+        return
+    end
+    
+    if KeyBox.Text == KEY then
+        keyActivationTime = getCurrentTimestamp()
+        keyValid = true
+        KeyFrame.Visible = false
+        Menu.Visible = true
+        Float.Visible = true
+        print("[KEY] Key activated! Valid for 3 days from " .. os.date("%Y-%m-%d %H:%M:%S", keyActivationTime))
+        updateTimeDisplay()
+        updateCanvas()
+    else
+        KeyBox.Text = ""
+        KeyBox.PlaceholderText = "Wrong Key!"
+        task.wait(0.5)
+        KeyBox.PlaceholderText = "Enter Key"
+    end
+end)
+
+Float.MouseButton1Click:Connect(function()
+    if checkKeyValid() then
+        Menu.Visible = not Menu.Visible
+        if Menu.Visible then
+            updateCanvas()
+        end
+    else
+        Menu.Visible = false
+        if keyExpiredPermanently then
+            print("[KEY] Key expired. Please restart the game.")
+        end
+    end
+end)
+
+Close.MouseButton1Click:Connect(function() Menu.Visible = false end)
+
+FOVBtn.MouseButton1Click:Connect(function() 
+    if not checkKeyValid() then return end
+    FOVOn = not FOVOn
+    Circle.Visible = FOVOn
+    FOVBtn.Text = FOVOn and "FOV : ON" or "FOV : OFF"
+end)
+
+SpinBtn.MouseButton1Click:Connect(function() 
+    if not checkKeyValid() then return end
+    SpinOn = not SpinOn
+    SpinBtn.Text = SpinOn and "SPIN : ON" or "SPIN : OFF"
+end)
+
+ESPBtn.MouseButton1Click:Connect(function() 
+    if not checkKeyValid() then return end
+    ESPOn = not ESPOn
+    ESPBtn.Text = ESPOn and "ESP : ON" or "ESP : OFF"
+end)
+
+AutoHeadBtn.MouseButton1Click:Connect(function()
+    if not checkKeyValid() then return end
+    AutoHeadOn = not AutoHeadOn
+    AutoHeadBtn.Text = AutoHeadOn and "AUTO HEAD : ON" or "AUTO HEAD : OFF"
+    AutoHeadBtn.BackgroundColor3 = AutoHeadOn and Color3.fromRGB(0,150,0) or Color3.fromRGB(0,100,0)
+    
+    if not AutoHeadOn and not HeadViewOn then
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= LP and v.Character and v.Character:FindFirstChild("Head") then
+                pcall(function()
+                    local head = v.Character.Head
+                    head.Size = Vector3.new(1.2, 1.2, 1.2)
+                    head.Transparency = 0
+                    head.CanCollide = true
+                    head.Massless = false
+                end)
+            end
+        end
+    end
+end)
+
+HeadViewBtn.MouseButton1Click:Connect(function()
+    if not checkKeyValid() then return end
+    HeadViewOn = not HeadViewOn
+    HeadViewBtn.Text = HeadViewOn and "HEAD VIEW : ON" or "HEAD VIEW : OFF"
+    HeadViewBtn.BackgroundColor3 = HeadViewOn and Color3.fromRGB(0,150,0) or Color3.fromRGB(0,100,0)
+    
+    if HeadViewOn then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LP then
+                ToggleHeadView(player, true)
+                updateHeadView(player)
+            end
+        end
+    else
+        clearAllHeadViews()
+    end
+end)
+
+UIS.InputChanged:Connect(function(i)
+    if Dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then Dragging(i.Position.X) end
+end)
+UIS.InputEnded:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then Dragging = nil end
+end)
+
+--============================================================
+-- HEAD VIEW - HÌNH TRÒN ĐỎ DÙNG DRAWING API
+--============================================================
+
+local HeadViewObjects = {}
+
+local function ToggleHeadView(player, create)
+    if player == LP then return end
+    if create and not HeadViewObjects[player] then
+        local circle = Drawing.new("Circle")
+        circle.Thickness = 1
+        circle.NumSides = 32
+        circle.Radius = 20
+        circle.Filled = true
+        circle.Color = Color3.fromRGB(255, 0, 0)
+        circle.Transparency = 0.3
+        circle.Visible = false
+        circle.ZIndex = 10
+        
+        HeadViewObjects[player] = {
+            Circle = circle
+        }
+    elseif not create and HeadViewObjects[player] then
+        if HeadViewObjects[player].Circle then
+            HeadViewObjects[player].Circle:Remove()
+        end
+        HeadViewObjects[player] = nil
+    end
+end
+
+local function updateHeadView(player)
+    local data = HeadViewObjects[player]
+    if not data then return end
+    
+    local char = player.Character
+    if not char then
+        if data.Circle then
+            data.Circle.Visible = false
+        end
+        return
+    end
+    
+    local head = char:FindFirstChild("Head")
+    if not head then
+        if data.Circle then
+            data.Circle.Visible = false
+        end
+        return
+    end
+    
+    local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+    
+    if not onScreen or pos.Z <= 0 then
+        data.Circle.Visible = false
+        return
+    end
+    
+    local headSize = head.Size.Magnitude
+    local scale = 1000 / pos.Z
+    local radius = math.max(headSize * scale * 0.5, 15)
+    radius = math.min(radius, 150)
+    
+    data.Circle.Position = Vector2.new(pos.X, pos.Y)
+    data.Circle.Radius = radius
+    data.Circle.Visible = true
+end
+
+local function clearAllHeadViews()
+    for player, data in pairs(HeadViewObjects) do
+        if data.Circle then
+            data.Circle:Remove()
+        end
+    end
+    HeadViewObjects = {}
+end
+
+--============================================================
+-- ESP SETUP
+--============================================================
+
+local function ToggleESP(player, create)
+    if player == LP then return end
+    if create and not ESPObjects[player] then
+        local t, l, b, h = Drawing.new("Text"), Drawing.new("Line"), Drawing.new("Square"), Drawing.new("Line")
+        t.Size, t.Center, t.Outline, t.Color = 13, true, true, Color3.fromRGB(255,0,0)
+        l.Thickness, l.Color = 1, Color3.fromRGB(0,255,150)
+        b.Thickness, b.Color = 2, Color3.fromRGB(255,255,255)
+        h.Thickness, h.Color = 4, Color3.fromRGB(0,255,0)
+        ESPObjects[player] = {Text = t, Line = l, Box = b, Health = h}
+    elseif not create and ESPObjects[player] then
+        for _, v in pairs(ESPObjects[player]) do pcall(function() v:Remove() end) end
+        ESPObjects[player] = nil
+    end
+end
+
+for _, p in pairs(Players:GetPlayers()) do 
+    ToggleESP(p, true)
+    if HeadViewOn then
+        ToggleHeadView(p, true)
+        updateHeadView(p)
+    end
+end
+
+Players.PlayerAdded:Connect(function(p) 
+    ToggleESP(p, true)
+    if HeadViewOn then
+        ToggleHeadView(p, true)
+        updateHeadView(p)
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(p) 
+    ToggleESP(p, false)
+    if HeadViewOn then
+        ToggleHeadView(p, false)
+    end
+end)
+
+local function setupCharacterAdded(player)
+    if player == LP then return end
+    player.CharacterAdded:Connect(function()
+        if HeadViewOn then
+            updateHeadView(player)
+        end
+    end)
+end
+
+for _, player in pairs(Players:GetPlayers()) do
+    if player ~= LP then
+        setupCharacterAdded(player)
+    end
+end
+
+Players.PlayerAdded:Connect(function(player)
+    if player ~= LP then
+        setupCharacterAdded(player)
+    end
+end)
+
+--============================================================
+-- MAIN LOOP
+--============================================================
+
+RunService.RenderStepped:Connect(function(dt)
+    if not checkKeyValid() then
+        for player, o in pairs(ESPObjects) do
+            o.Text.Visible = false
+            o.Line.Visible = false
+            o.Box.Visible = false
+            o.Health.Visible = false
+        end
+        return
+    end
+
+    Circle.Size = UDim2.fromOffset(FOV_SIZE, FOV_SIZE)
+
+    -- AUTO HEAD - Phóng to đầu đối thủ
+    if AutoHeadOn then
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= LP and v.Character and v.Character:FindFirstChild("Head") then
+                pcall(function()
+                    local head = v.Character.Head
+                    local size = math.min(HITBOX_SIZE, MAX_HEAD_SIZE)
+                    head.Size = Vector3.new(size, size, size)
+                    head.Transparency = 1
+                    head.CanCollide = false
+                    head.Massless = true
+                end)
+            end
+        end
+    end
+
+    -- SPIN
+    local char = LP.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if SpinOn and root and hum then
+        hum.AutoRotate = false
+        SpinAngle = SpinAngle + math.rad(SPIN_SPEED) * dt
+        root.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, SpinAngle, 0)
+    elseif hum then
+        hum.AutoRotate = true
+    end
+
+    -- HEAD VIEW - Cập nhật hình tròn
+    if HeadViewOn then
+        for player, data in pairs(HeadViewObjects) do
+            if player and player.Parent == Players then
+                updateHeadView(player)
+            else
+                if data.Circle then
+                    data.Circle.Visible = false
+                end
+            end
+        end
+    end
+
+    -- ESP
+    for player, o in pairs(ESPObjects) do
+        local pc = player.Character
+        local pHum = pc and pc:FindFirstChildOfClass("Humanoid")
+        local pRoot = pc and pc:FindFirstChild("HumanoidRootPart")
+        local myRoot = char and char:FindFirstChild("HumanoidRootPart")
+
+        if ESPOn and myRoot and pRoot and pHum and pHum.Health > 0 then
+            local pos, vis = Camera:WorldToViewportPoint(pRoot.Position)
+            if vis and pos.Z > 0 then
+                local dist = math.floor((pRoot.Position - myRoot.Position).Magnitude)
+                local w, h = (1000 / pos.Z) * 0.7, 1000 / pos.Z
+                local hp = math.clamp(pHum.Health / pHum.MaxHealth, 0, 1)
+
+                o.Box.Size, o.Box.Position, o.Box.Visible = Vector2.new(w, h), Vector2.new(pos.X - w/2, pos.Y - h/2), true
+                o.Health.From, o.Health.To, o.Health.Visible = Vector2.new(pos.X - w/2 - 6, pos.Y + h/2), Vector2.new(pos.X - w/2 - 6, pos.Y + h/2 - (h * hp)), true
+                o.Text.Position, o.Text.Text, o.Text.Visible = Vector2.new(pos.X, pos.Y - h/2 - 18), player.Name.." ["..dist.."m] ["..math.floor(pHum.Health).."HP]", true
+                o.Line.From, o.Line.To, o.Line.Visible = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y), Vector2.new(pos.X, pos.Y + h/2), true
+            else o.Text.Visible, o.Line.Visible, o.Box.Visible, o.Health.Visible = false, false, false, false end
+        else o.Text.Visible, o.Line.Visible, o.Box.Visible, o.Health.Visible = false, false, false, false end
+    end
+end)
+
+task.spawn(function()
+    local hue = 0
+    while Gui.Parent do
+        hue = (hue + 0.01) % 1
+        Title.TextColor3 = Color3.fromHSV(hue, 0.7, 1)
+        task.wait(0.03)
+    end
+end)
+
+print("[Tuấn Menu Vip] Loaded - Key valid for 3 days after activation")
