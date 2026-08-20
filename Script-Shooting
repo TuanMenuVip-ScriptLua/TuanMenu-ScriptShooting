@@ -6,63 +6,13 @@
 
 local Players, RunService, UIS = game:GetService("Players"), game:GetService("RunService"), game:GetService("UserInputService")
 local LP, Camera = Players.LocalPlayer, workspace.CurrentCamera
-local KEY = "TMV3day"
-
---============================================================
--- KEY SYSTEM WITH 3-DAY EXPIRATION
---============================================================
-
-local function getCurrentTimestamp()
-    return os.time()
-end
-
-local function getExpirationTimestamp(activationTime)
-    return activationTime + (3 * 24 * 60 * 60) -- 3 days in seconds
-end
-
-local function isKeyExpired(activationTime)
-    local currentTime = getCurrentTimestamp()
-    local expirationTime = getExpirationTimestamp(activationTime)
-    return currentTime > expirationTime
-end
-
-local function formatTimeRemaining(activationTime)
-    local currentTime = getCurrentTimestamp()
-    local expirationTime = getExpirationTimestamp(activationTime)
-    local remaining = expirationTime - currentTime
-    
-    if remaining <= 0 then
-        return "Expired"
-    end
-    
-    local days = math.floor(remaining / (24 * 60 * 60))
-    remaining = remaining - (days * 24 * 60 * 60)
-    local hours = math.floor(remaining / (60 * 60))
-    remaining = remaining - (hours * 60 * 60)
-    local minutes = math.floor(remaining / 60)
-    local seconds = math.floor(remaining % 60)
-    
-    if days > 0 then
-        return string.format("%dd %02dh %02dm", days, hours, minutes)
-    elseif hours > 0 then
-        return string.format("%02dh %02dm %02ds", hours, minutes, seconds)
-    elseif minutes > 0 then
-        return string.format("%02dm %02ds", minutes, seconds)
-    else
-        return string.format("%02ds", seconds)
-    end
-end
-
---============================================================
+local KEY = "TMV_Key100VV"
 
 local ESPOn, FOVOn, SpinOn, AutoHeadOn, HeadViewOn = false, true, false, false, false
 local FOV_SIZE, SPIN_SPEED, HITBOX_SIZE = 300, 100, 15
 local SpinAngle, ESPObjects, Dragging = 0, {}, nil
 
 local MAX_HEAD_SIZE = 100
-local keyActivationTime = nil
-local keyValid = false
-local keyExpiredPermanently = false
 
 pcall(function() game.CoreGui.TuanMenuVip:Destroy() end)
 pcall(function() game.CoreGui.TuanMenuVipFOV:Destroy() end)
@@ -72,12 +22,8 @@ Gui.Name, Gui.ResetOnSpawn, Gui.IgnoreGuiInset = "TuanMenuVip", false, true
 
 local function Corner(p, r) local c = Instance.new("UICorner", p) c.CornerRadius = UDim.new(0, r or 6) return c end
 
---============================================================
--- KEY SYSTEM UI
---============================================================
-
 local KeyFrame = Instance.new("Frame", Gui)
-KeyFrame.Size, KeyFrame.Position, KeyFrame.AnchorPoint, KeyFrame.BackgroundColor3 = UDim2.fromOffset(220,150), UDim2.fromScale(0.5,0.5), Vector2.new(0.5,0.5), Color3.fromRGB(20,10,30)
+KeyFrame.Size, KeyFrame.Position, KeyFrame.AnchorPoint, KeyFrame.BackgroundColor3 = UDim2.fromOffset(200,110), UDim2.fromScale(0.5,0.5), Vector2.new(0.5,0.5), Color3.fromRGB(20,10,30)
 Corner(KeyFrame, 10)
 
 local KeyTitle = Instance.new("TextLabel", KeyFrame)
@@ -90,50 +36,6 @@ Corner(KeyBox)
 local KeyBtn = Instance.new("TextButton", KeyFrame)
 KeyBtn.Size, KeyBtn.Position, KeyBtn.Text, KeyBtn.BackgroundColor3, KeyBtn.TextColor3, KeyBtn.Font, KeyBtn.TextSize = UDim2.new(0.85,0,0,26), UDim2.new(0.075,0,0,74), "UNLOCK", Color3.fromRGB(0,150,0), Color3.fromRGB(255,255,255), Enum.Font.Code, 12
 Corner(KeyBtn)
-
--- TIME REMAINING DISPLAY
-local TimeDisplay = Instance.new("TextLabel", KeyFrame)
-TimeDisplay.Size = UDim2.new(0.85,0,0,18)
-TimeDisplay.Position = UDim2.new(0.075,0,0,104)
-TimeDisplay.BackgroundTransparency = 1
-TimeDisplay.Text = "Time: --"
-TimeDisplay.TextColor3 = Color3.fromRGB(0,255,150)
-TimeDisplay.Font = Enum.Font.Code
-TimeDisplay.TextSize = 11
-TimeDisplay.Parent = KeyFrame
-
---============================================================
--- UPDATE TIME DISPLAY
---============================================================
-
-local function updateTimeDisplay()
-    if keyExpiredPermanently then
-        TimeDisplay.Text = "EXPIRED - Key no longer valid"
-        TimeDisplay.TextColor3 = Color3.fromRGB(255,0,0)
-        return
-    end
-    
-    if keyActivationTime and keyValid then
-        if isKeyExpired(keyActivationTime) then
-            TimeDisplay.Text = "EXPIRED! Please restart"
-            TimeDisplay.TextColor3 = Color3.fromRGB(255,0,0)
-        else
-            local timeLeft = formatTimeRemaining(keyActivationTime)
-            TimeDisplay.Text = "Time left: " .. timeLeft
-            TimeDisplay.TextColor3 = Color3.fromRGB(0,255,150)
-        end
-    else
-        TimeDisplay.Text = "Time: --"
-    end
-end
-
--- Update time every second
-task.spawn(function()
-    while true do
-        updateTimeDisplay()
-        task.wait(1)
-    end
-end)
 
 --============================================================
 -- MENU CHÍNH CÓ THANH CUỘN
@@ -303,136 +205,11 @@ Float.Parent = Gui
 Corner(Float, 8)
 Instance.new("UIStroke", Float).Color = Color3.fromRGB(0, 255, 150)
 
---============================================================
--- KEY VALIDATION
---============================================================
-
-local function checkKeyValid()
-    if keyExpiredPermanently then
-        return false
-    end
-    
-    if not keyValid or (keyActivationTime and isKeyExpired(keyActivationTime)) then
-        if keyActivationTime and isKeyExpired(keyActivationTime) then
-            keyExpiredPermanently = true
-            keyValid = false
-            print("[KEY] Key has expired! Cannot use anymore.")
-            updateTimeDisplay()
-        end
-        return false
-    end
-    return true
-end
-
---============================================================
--- EVENTS
---============================================================
-
-KeyBtn.MouseButton1Click:Connect(function()
-    if keyExpiredPermanently then
-        KeyBox.Text = ""
-        KeyBox.PlaceholderText = "Key Expired!"
-        task.wait(1)
-        KeyBox.PlaceholderText = "Enter Key"
-        return
-    end
-    
-    if KeyBox.Text == KEY then
-        keyActivationTime = getCurrentTimestamp()
-        keyValid = true
-        KeyFrame.Visible = false
-        Menu.Visible = true
-        Float.Visible = true
-        print("[KEY] Key activated! Valid for 3 days from " .. os.date("%Y-%m-%d %H:%M:%S", keyActivationTime))
-        updateTimeDisplay()
-        updateCanvas()
-    else
-        KeyBox.Text = ""
-        KeyBox.PlaceholderText = "Wrong Key!"
-        task.wait(0.5)
-        KeyBox.PlaceholderText = "Enter Key"
-    end
-end)
-
 Float.MouseButton1Click:Connect(function()
-    if checkKeyValid() then
-        Menu.Visible = not Menu.Visible
-        if Menu.Visible then
-            updateCanvas()
-        end
-    else
-        Menu.Visible = false
-        if keyExpiredPermanently then
-            print("[KEY] Key expired. Please restart the game.")
-        end
+    Menu.Visible = not Menu.Visible
+    if Menu.Visible then
+        updateCanvas()
     end
-end)
-
-Close.MouseButton1Click:Connect(function() Menu.Visible = false end)
-
-FOVBtn.MouseButton1Click:Connect(function() 
-    if not checkKeyValid() then return end
-    FOVOn = not FOVOn
-    Circle.Visible = FOVOn
-    FOVBtn.Text = FOVOn and "FOV : ON" or "FOV : OFF"
-end)
-
-SpinBtn.MouseButton1Click:Connect(function() 
-    if not checkKeyValid() then return end
-    SpinOn = not SpinOn
-    SpinBtn.Text = SpinOn and "SPIN : ON" or "SPIN : OFF"
-end)
-
-ESPBtn.MouseButton1Click:Connect(function() 
-    if not checkKeyValid() then return end
-    ESPOn = not ESPOn
-    ESPBtn.Text = ESPOn and "ESP : ON" or "ESP : OFF"
-end)
-
-AutoHeadBtn.MouseButton1Click:Connect(function()
-    if not checkKeyValid() then return end
-    AutoHeadOn = not AutoHeadOn
-    AutoHeadBtn.Text = AutoHeadOn and "AUTO HEAD : ON" or "AUTO HEAD : OFF"
-    AutoHeadBtn.BackgroundColor3 = AutoHeadOn and Color3.fromRGB(0,150,0) or Color3.fromRGB(0,100,0)
-    
-    if not AutoHeadOn and not HeadViewOn then
-        for _, v in pairs(Players:GetPlayers()) do
-            if v ~= LP and v.Character and v.Character:FindFirstChild("Head") then
-                pcall(function()
-                    local head = v.Character.Head
-                    head.Size = Vector3.new(1.2, 1.2, 1.2)
-                    head.Transparency = 0
-                    head.CanCollide = true
-                    head.Massless = false
-                end)
-            end
-        end
-    end
-end)
-
-HeadViewBtn.MouseButton1Click:Connect(function()
-    if not checkKeyValid() then return end
-    HeadViewOn = not HeadViewOn
-    HeadViewBtn.Text = HeadViewOn and "HEAD VIEW : ON" or "HEAD VIEW : OFF"
-    HeadViewBtn.BackgroundColor3 = HeadViewOn and Color3.fromRGB(0,150,0) or Color3.fromRGB(0,100,0)
-    
-    if HeadViewOn then
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LP then
-                ToggleHeadView(player, true)
-                updateHeadView(player)
-            end
-        end
-    else
-        clearAllHeadViews()
-    end
-end)
-
-UIS.InputChanged:Connect(function(i)
-    if Dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then Dragging(i.Position.X) end
-end)
-UIS.InputEnded:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then Dragging = nil end
 end)
 
 --============================================================
@@ -512,6 +289,77 @@ local function clearAllHeadViews()
 end
 
 --============================================================
+-- EVENTS
+--============================================================
+
+KeyBtn.MouseButton1Click:Connect(function()
+    if KeyBox.Text == KEY then KeyFrame.Visible = false; Menu.Visible, Float.Visible = true, true else KeyBox.Text, KeyBox.PlaceholderText = "", "Wrong Key!" end
+    updateCanvas()
+end)
+
+Close.MouseButton1Click:Connect(function() Menu.Visible = false end)
+
+FOVBtn.MouseButton1Click:Connect(function() 
+    FOVOn = not FOVOn
+    Circle.Visible = FOVOn
+    FOVBtn.Text = FOVOn and "FOV : ON" or "FOV : OFF"
+end)
+
+SpinBtn.MouseButton1Click:Connect(function() 
+    SpinOn = not SpinOn
+    SpinBtn.Text = SpinOn and "SPIN : ON" or "SPIN : OFF"
+end)
+
+ESPBtn.MouseButton1Click:Connect(function() 
+    ESPOn = not ESPOn
+    ESPBtn.Text = ESPOn and "ESP : ON" or "ESP : OFF"
+end)
+
+AutoHeadBtn.MouseButton1Click:Connect(function()
+    AutoHeadOn = not AutoHeadOn
+    AutoHeadBtn.Text = AutoHeadOn and "AUTO HEAD : ON" or "AUTO HEAD : OFF"
+    AutoHeadBtn.BackgroundColor3 = AutoHeadOn and Color3.fromRGB(0,150,0) or Color3.fromRGB(0,100,0)
+    
+    if not AutoHeadOn and not HeadViewOn then
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= LP and v.Character and v.Character:FindFirstChild("Head") then
+                pcall(function()
+                    local head = v.Character.Head
+                    head.Size = Vector3.new(1.2, 1.2, 1.2)
+                    head.Transparency = 0
+                    head.CanCollide = true
+                    head.Massless = false
+                end)
+            end
+        end
+    end
+end)
+
+HeadViewBtn.MouseButton1Click:Connect(function()
+    HeadViewOn = not HeadViewOn
+    HeadViewBtn.Text = HeadViewOn and "HEAD VIEW : ON" or "HEAD VIEW : OFF"
+    HeadViewBtn.BackgroundColor3 = HeadViewOn and Color3.fromRGB(0,150,0) or Color3.fromRGB(0,100,0)
+    
+    if HeadViewOn then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LP then
+                ToggleHeadView(player, true)
+                updateHeadView(player)
+            end
+        end
+    else
+        clearAllHeadViews()
+    end
+end)
+
+UIS.InputChanged:Connect(function(i)
+    if Dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then Dragging(i.Position.X) end
+end)
+UIS.InputEnded:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then Dragging = nil end
+end)
+
+--============================================================
 -- ESP SETUP
 --============================================================
 
@@ -579,16 +427,6 @@ end)
 --============================================================
 
 RunService.RenderStepped:Connect(function(dt)
-    if not checkKeyValid() then
-        for player, o in pairs(ESPObjects) do
-            o.Text.Visible = false
-            o.Line.Visible = false
-            o.Box.Visible = false
-            o.Health.Visible = false
-        end
-        return
-    end
-
     Circle.Size = UDim2.fromOffset(FOV_SIZE, FOV_SIZE)
 
     -- AUTO HEAD - Phóng to đầu đối thủ
@@ -663,5 +501,3 @@ task.spawn(function()
         task.wait(0.03)
     end
 end)
-
-print("[Tuấn Menu Vip] Loaded - Key valid for 3 days after activation")
