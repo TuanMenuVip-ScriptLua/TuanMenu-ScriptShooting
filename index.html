@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Tuấn Menu Vip</title>
+  <style>
+    /* Reset & base */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+    body {
+      min-height: 100vh;
+      background: #0b0f1a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+    }
+    .card {
+      max-width: 420px;
+      width: 100%;
+      background: #141b2b;
+      border-radius: 40px;
+      padding: 32px 24px 40px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px #2a3450 inset;
+      transition: 0.2s;
+      text-align: center;
+    }
+    /* header */
+    .title {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, #f0c27f, #fc5c7d);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 12px rgba(252, 92, 125, 0.3);
+      margin-bottom: 6px;
+    }
+    .sub-author {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      color: #a0b3d9;
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 28px;
+      background: #1f2a3f;
+      padding: 8px 18px;
+      border-radius: 60px;
+      width: fit-content;
+      margin-left: auto;
+      margin-right: auto;
+      border: 1px solid #3a4766;
+    }
+    .sub-author span {
+      color: #f5c27b;
+    }
+    /* info items */
+    .info-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: #101726;
+      border-radius: 28px;
+      padding: 20px 16px;
+      margin-bottom: 30px;
+      border: 1px solid #29344f;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #c9d6f0;
+      font-size: 15px;
+      font-weight: 500;
+      padding: 0 4px;
+    }
+    .info-row .label {
+      color: #7b8bb0;
+      font-weight: 400;
+    }
+    .info-row .value {
+      background: #1f2a40;
+      padding: 4px 16px;
+      border-radius: 40px;
+      font-weight: 600;
+      color: #e8edff;
+      border: 1px solid #384564;
+      font-size: 14px;
+    }
+    .highlight-badge {
+      background: #f5c27b20;
+      border: 1px solid #f5c27b60;
+      color: #f5c27b;
+      padding: 4px 16px;
+      border-radius: 40px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    /* key display - chỉ để hiển thị placeholder */
+    .key-box {
+      background: #0b111e;
+      border-radius: 60px;
+      padding: 14px 20px;
+      margin: 24px 0 28px;
+      border: 2px dashed #3e4d70;
+      color: #b7cbff;
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      word-break: break-all;
+      min-height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: 0.2s;
+      box-shadow: inset 0 4px 8px rgba(0,0,0,0.5);
+    }
+    .key-box .placeholder {
+      color: #5b6e94;
+      font-weight: 400;
+      font-size: 18px;
+    }
+    /* nút GET KEY - màu đỏ */
+    .btn-getkey {
+      width: 100%;
+      background: #d32f2f;
+      border: none;
+      border-radius: 80px;
+      padding: 18px 10px;
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: 0.15s ease;
+      box-shadow: 0 8px 0 #7a1f1f, 0 6px 20px rgba(211, 47, 47, 0.4);
+      margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+    .btn-getkey:active {
+      transform: translateY(5px);
+      box-shadow: 0 3px 0 #7a1f1f, 0 6px 20px rgba(211, 47, 47, 0.4);
+    }
+    /* FREE KEY SYSTEM + link */
+    .free-system {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      color: #8d9fc7;
+      font-size: 14px;
+      background: #1b253b;
+      padding: 10px 16px;
+      border-radius: 60px;
+      margin-bottom: 22px;
+      border: 1px solid #31405e;
+    }
+    .free-system .badge {
+      background: #fc5c7d30;
+      padding: 2px 14px;
+      border-radius: 40px;
+      color: #f58b9f;
+      font-weight: 600;
+      font-size: 13px;
+      border: 1px solid #fc5c7d50;
+    }
+    .link-requirement {
+      color: #889ac2;
+      font-size: 14px;
+      background: #121b2e;
+      padding: 8px 16px;
+      border-radius: 60px;
+      display: inline-block;
+      border: 1px solid #2e3d5e;
+      margin-bottom: 4px;
+    }
+    .link-requirement i {
+      font-style: normal;
+      background: #fc5c7d20;
+      padding: 0 10px;
+      border-radius: 30px;
+      color: #fc5c7d;
+      font-weight: 600;
+    }
+    .footnote {
+      margin-top: 24px;
+      color: #4d5d7e;
+      font-size: 12px;
+      border-top: 1px solid #1f2a40;
+      padding-top: 18px;
+      letter-spacing: 0.3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <!-- Tiêu đề -->
+    <div class="title">TUẤN MENU VIP</div>
+    <!-- By: TuanMenu -->
+    <div class="sub-author">
+      <span>✦</span> By: <strong style="color:#f5c27b;">TuanMenu</strong> <span>✦</span>
+    </div>
+
+    <!-- Thông tin: thời gian 1 tuần, max devices -->
+    <div class="info-grid">
+      <div class="info-row">
+        <span class="label">⏱ Thời gian</span>
+        <span class="value">1 Tuần</span>
+      </div>
+      <div class="info-row">
+        <span class="label">📱 Max Devices</span>
+        <span class="value">1 Máy</span>
+      </div>
+      <div class="info-row" style="justify-content: center; gap: 8px; margin-top: 4px;">
+        <span class="highlight-badge">✔️ No Root</span>
+        <span style="color:#4d5d7e;">|</span>
+        <span class="highlight-badge" style="background: #fc5c7d20; border-color: #fc5c7d60; color: #fc5c7d;">VIP</span>
+      </div>
+    </div>
+
+    <!-- Key hiển thị (chỉ placeholder) -->
+    <div class="key-box" id="keyDisplay">
+      <span class="placeholder">🔑 Nhấn GET KEY</span>
+    </div>
+
+    <!-- Nút GET KEY màu đỏ - chuyển hướng -->
+    <button class="btn-getkey" id="getKeyBtn">✦ GET KEY ✦</button>
+
+    <!-- FREE KEY SYSTEM + link requirement -->
+    <div class="free-system">
+      <span class="badge">FREE</span>
+      <span>KEY SYSTEM</span>
+    </div>
+    <div class="link-requirement">
+      ⚠️ Yêu cầu vượt link thủ công tối thiểu <i>100 giây</i>
+    </div>
+
+    <div class="footnote">
+      • Tuấn Menu Vip • Premium •
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const getKeyBtn = document.getElementById('getKeyBtn');
+
+      // === THAY LINK CỦA BẠN VÀO ĐÂY ===
+      const TARGET_URL = 'https://link4m.org/rH5gO';  // <--- WEB CỦA BẠN CÓ TẠO KEY
+
+      // Khi ấn nút GET KEY -> chuyển hướng sang web của bạn
+      getKeyBtn.addEventListener('click', function() {
+        window.location.href = TARGET_URL;
+      });
+
+    })();
+  </script>
+</body>
+  </html>
